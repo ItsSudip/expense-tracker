@@ -4,7 +4,7 @@ A modern expense tracking web application that stores your data in Google Sheets
 
 ## Features
 
-- **Google OAuth Authentication** - Secure login with your Google account
+- **Google OAuth Authentication** - Login with your Google account securely
 - **Google Sheets Storage** - Your data is stored in your own Google Sheets
 - **Expense Management** - Add, edit, delete, and categorize expenses
 - **Income Tracking** - Track your income sources
