@@ -38,4 +38,7 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Read the SMS inbox to import bank/UPI/card transaction messages.
+         Backfill only (no RECEIVE_SMS); requested at runtime. -->
+    <uses-permission android:name="android.permission.READ_SMS" />
 </manifest>
