@@ -12,9 +12,12 @@ import {
   CalendarOutlined,
   SettingOutlined,
   ReloadOutlined,
+  ScanOutlined,
 } from '@ant-design/icons';
 import ExpenseList from './ExpenseList';
 import ExpenseForm from './ExpenseForm';
+import SmsImport from './SmsImport';
+import { isSmsAvailable } from '../services/smsImport';
 import IncomeForm from './IncomeForm';
 import BudgetSettings from './BudgetSettings';
 import RecurringExpenses from './RecurringExpenses';
@@ -30,6 +33,7 @@ const Dashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
   const [showExpenseForm, setShowExpenseForm] = useState(false);
   const [showIncomeForm, setShowIncomeForm] = useState(false);
+  const [showSmsImport, setShowSmsImport] = useState(false);
   const [editingExpense, setEditingExpense] = useState(null);
 
   // Calculate totals
@@ -262,7 +266,7 @@ const Dashboard = () => {
 
         {/* Action Buttons */}
         {(activeTab === 'overview' || activeTab === 'expenses') && (
-          <Space style={{ marginBottom: '24px' }}>
+          <Space style={{ marginBottom: '24px' }} wrap>
             <Button
               type="primary"
               icon={<PlusOutlined />}
@@ -289,6 +293,16 @@ const Dashboard = () => {
             >
               Add Income
             </Button>
+
+            {isSmsAvailable() && (
+              <Button
+                icon={<ScanOutlined />}
+                size="large"
+                onClick={() => setShowSmsImport(true)}
+              >
+                Import from SMS
+              </Button>
+            )}
           </Space>
         )}
 
@@ -308,6 +322,8 @@ const Dashboard = () => {
       )}
 
       {showIncomeForm && <IncomeForm onClose={() => setShowIncomeForm(false)} />}
+
+      {showSmsImport && <SmsImport onClose={() => setShowSmsImport(false)} />}
     </Layout>
   );
 };
