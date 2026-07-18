@@ -1,3 +1,21 @@
 {
+  "permissions": {
+    "allow": [
+      "Bash(git commit -q -m 'feat\\(android\\): add Capacitor Android platform *)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(npx eslint *)",
+      "Bash(echo \"=== eslint exit: $? ===\")",
+      "Bash(python3 -)",
+      "Bash(node /tmp/claude-1000/-home-sudip-ownspace-expense-tracker/5f9b5307-4f19-47e6-9de0-047576f5554c/scratchpad/test_parser.mjs)",
+      "Bash(node src/services/smsParser.test.mjs)",
+      "Bash(git add *)",
+      "Bash(git commit -q -m 'feat\\(sms\\): add on-device SMS transaction parser *)",
+      "WebSearch",
+      "Bash(npm view *)",
+      "Bash(git commit -q -m 'feat\\(sms\\): SMS import review UI with lookback range selector *)",
+      "Bash(git check-ignore *)"
+    ]
+  },
   "spinnerTipsEnabled": true
 }
