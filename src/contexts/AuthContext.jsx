@@ -1,7 +1,18 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { GoogleOAuthProvider, useGoogleLogin } from '@react-oauth/google';
+import { Capacitor } from '@capacitor/core';
+import { SocialLogin } from '@capgo/capacitor-social-login';
 
 const AuthContext = createContext(null);
+
+// Scopes required for the Google Sheets storage backend. Shared by both the
+// web (@react-oauth/google) and native (@capgo/capacitor-social-login) flows.
+const GOOGLE_SCOPES = [
+  'https://www.googleapis.com/auth/spreadsheets',
+  'https://www.googleapis.com/auth/drive.file',
+];
+
+const isNative = Capacitor.isNativePlatform();
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
@@ -29,9 +40,43 @@ const AuthProviderContent = ({ children }) => {
     }
   };
 
+  // Given a fresh Google access token, fetch the user's profile and persist
+  // both. Shared by the web and native sign-in flows so the resulting
+  // { user, accessToken } state is identical regardless of platform.
+  const applyAccessToken = async (token) => {
+    setAccessToken(token);
+    try {
+      const userInfoResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const userInfo = await userInfoResponse.json();
+
+      setUser(userInfo);
+      localStorage.setItem('user', JSON.stringify(userInfo));
+      localStorage.setItem('accessToken', token);
+    } catch (error) {
+      console.error('Failed to fetch user info:', error);
+    }
+  };
+
   useEffect(() => {
+    // On native, the social-login plugin must be initialized once with the web
+    // client ID before any login/logout call. On web this is a no-op.
+    const initNative = async () => {
+      if (!isNative) return;
+      try {
+        await SocialLogin.initialize({
+          google: { webClientId: import.meta.env.VITE_GOOGLE_CLIENT_ID },
+        });
+      } catch (error) {
+        console.error('SocialLogin.initialize failed:', error);
+      }
+    };
+
     // Check if user is already logged in (stored in localStorage)
     const checkAuth = async () => {
+      await initNative();
+
       const storedUser = localStorage.getItem('user');
       const storedToken = localStorage.getItem('accessToken');
 
@@ -55,35 +100,53 @@ const AuthProviderContent = ({ children }) => {
     checkAuth();
   }, []);
 
-  const login = useGoogleLogin({
+  // Web sign-in: Google Identity Services popup/implicit flow. Only usable in a
+  // browser context (needs a web origin), so it is not called on native.
+  const webLogin = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
-      setAccessToken(tokenResponse.access_token);
-
-      // Fetch user info
-      try {
-        const userInfoResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
-          headers: { Authorization: `Bearer ${tokenResponse.access_token}` },
-        });
-        const userInfo = await userInfoResponse.json();
-
-        setUser(userInfo);
-        localStorage.setItem('user', JSON.stringify(userInfo));
-        localStorage.setItem('accessToken', tokenResponse.access_token);
-      } catch (error) {
-        console.error('Failed to fetch user info:', error);
-      }
+      await applyAccessToken(tokenResponse.access_token);
     },
     onError: (error) => {
       console.error('Login failed:', error);
     },
-    scope: 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file',
+    scope: GOOGLE_SCOPES.join(' '),
   });
 
-  const logout = () => {
+  // Native sign-in: Credential Manager via @capgo/capacitor-social-login. Returns
+  // an access token directly on-device (no backend), with the same Sheets scopes.
+  const nativeLogin = async () => {
+    try {
+      const { result } = await SocialLogin.login({
+        provider: 'google',
+        options: { scopes: GOOGLE_SCOPES, forceRefreshToken: true },
+      });
+      const token = result?.accessToken?.token;
+      if (!token) {
+        console.error('Native login returned no access token:', result);
+        return;
+      }
+      await applyAccessToken(token);
+    } catch (error) {
+      console.error('Native login failed:', error);
+    }
+  };
+
+  const login = isNative ? nativeLogin : webLogin;
+
+  const logout = async () => {
     setUser(null);
     setAccessToken(null);
     localStorage.removeItem('user');
     localStorage.removeItem('accessToken');
+
+    if (isNative) {
+      try {
+        await SocialLogin.logout({ provider: 'google' });
+      } catch (error) {
+        // Non-fatal: local state is already cleared.
+        console.error('Native logout failed:', error);
+      }
+    }
   };
 
   // Handle token expiration - called when API returns 401

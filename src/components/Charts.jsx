@@ -1,24 +1,45 @@
 import { useMemo } from 'react';
 import { useData } from '../contexts/DataContext';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from 'recharts';
-import { startOfMonth, endOfMonth, subMonths, format, parseISO } from 'date-fns';
 
-const COLORS = ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40', '#FF6384', '#C9CBCF'];
+const MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const MONTH_NAMES = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
+
+// Expense dates are stored as 'YYYY-MM-DD' strings; slice the month out directly
+// so the result does not drift with the browser's timezone.
+const monthOf = (dateStr) => parseInt((dateStr || '').slice(5, 7), 10);
+
+const CustomTooltip = ({ active, payload }) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-white p-3 shadow-lg rounded-lg border border-gray-200">
+        <p className="font-semibold">{payload[0].name}</p>
+        <p className="text-sm text-gray-600">
+          ₹{payload[0].value.toFixed(2)}
+        </p>
+      </div>
+    );
+  }
+  return null;
+};
 
 const Charts = () => {
-  const { expenses, categories } = useData();
+  // `expenses` is already filtered by the selected month (or whole year when "All Months").
+  // `allExpenses` is the full active year and drives the trend chart.
+  const { expenses, allExpenses, categories, activeYear, activeMonth } = useData();
 
-  // Category spending data (current month)
+  const periodLabel = activeMonth
+    ? `${MONTH_NAMES[activeMonth - 1]} ${activeYear}`
+    : `All of ${activeYear}`;
+
+  // Category spending for the selected period
   const categoryData = useMemo(() => {
-    const now = new Date();
-    const monthStart = startOfMonth(now).toISOString().split('T')[0];
-    const monthEnd = endOfMonth(now).toISOString().split('T')[0];
-
     const spending = {};
     expenses.forEach((exp) => {
-      if (exp.date >= monthStart && exp.date <= monthEnd) {
-        spending[exp.category] = (spending[exp.category] || 0) + exp.amount;
-      }
+      spending[exp.category] = (spending[exp.category] || 0) + exp.amount;
     });
 
     return Object.entries(spending)
@@ -30,40 +51,23 @@ const Charts = () => {
       .sort((a, b) => b.value - a.value);
   }, [expenses, categories]);
 
-  // Monthly trend data (last 6 months)
+  // Monthly trend across the active year (up to the current month if viewing this year)
   const monthlyTrendData = useMemo(() => {
-    const months = [];
-    for (let i = 5; i >= 0; i--) {
-      const month = subMonths(new Date(), i);
-      const monthStart = startOfMonth(month).toISOString().split('T')[0];
-      const monthEnd = endOfMonth(month).toISOString().split('T')[0];
+    const totals = new Array(12).fill(0);
+    allExpenses.forEach((exp) => {
+      const m = monthOf(exp.date);
+      if (m >= 1 && m <= 12) totals[m - 1] += exp.amount;
+    });
 
-      const monthExpenses = expenses
-        .filter((exp) => exp.date >= monthStart && exp.date <= monthEnd)
-        .reduce((sum, exp) => sum + exp.amount, 0);
+    const now = new Date();
+    const lastMonth = activeYear === now.getFullYear() ? now.getMonth() + 1 : 12;
 
-      months.push({
-        month: format(month, 'MMM'),
-        expenses: parseFloat(monthExpenses.toFixed(2)),
-      });
-    }
-
-    return months;
-  }, [expenses]);
-
-  const CustomTooltip = ({ active, payload }) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-white p-3 shadow-lg rounded-lg border border-gray-200">
-          <p className="font-semibold">{payload[0].name}</p>
-          <p className="text-sm text-gray-600">
-            ₹{payload[0].value.toFixed(2)}
-          </p>
-        </div>
-      );
-    }
-    return null;
-  };
+    return MONTH_LABELS.slice(0, lastMonth).map((label, i) => ({
+      month: label,
+      expenses: parseFloat(totals[i].toFixed(2)),
+      isSelected: activeMonth === i + 1,
+    }));
+  }, [allExpenses, activeYear, activeMonth]);
 
   const totalSpending = categoryData.reduce((sum, item) => sum + item.value, 0);
 
@@ -71,10 +75,10 @@ const Charts = () => {
     <>
       {/* Category Pie Chart */}
       <div className="bg-white rounded-lg p-6 border border-gray-200">
-        <h3 className="text-lg font-semibold mb-4">Spending by Category (This Month)</h3>
+        <h3 className="text-lg font-semibold mb-4">Spending by Category ({periodLabel})</h3>
         {categoryData.length === 0 ? (
           <div className="text-center py-12 text-gray-500">
-            <p>No expenses this month</p>
+            <p>No expenses for {periodLabel}</p>
           </div>
         ) : (
           <div>
@@ -123,10 +127,10 @@ const Charts = () => {
 
       {/* Monthly Trend Bar Chart */}
       <div className="bg-white rounded-lg p-6 border border-gray-200">
-        <h3 className="text-lg font-semibold mb-4">Monthly Spending Trend</h3>
+        <h3 className="text-lg font-semibold mb-4">Monthly Spending Trend ({activeYear})</h3>
         {monthlyTrendData.every((d) => d.expenses === 0) ? (
           <div className="text-center py-12 text-gray-500">
-            <p>No expense data available</p>
+            <p>No expense data available for {activeYear}</p>
           </div>
         ) : (
           <ResponsiveContainer width="100%" height={300}>
@@ -141,7 +145,11 @@ const Charts = () => {
                 }}
               />
               <Legend />
-              <Bar dataKey="expenses" fill="#3B82F6" name="Expenses (₹)" radius={[8, 8, 0, 0]} />
+              <Bar dataKey="expenses" fill="#3B82F6" name="Expenses (₹)" radius={[8, 8, 0, 0]}>
+                {monthlyTrendData.map((entry) => (
+                  <Cell key={entry.month} fill={entry.isSelected ? '#1D4ED8' : '#3B82F6'} />
+                ))}
+              </Bar>
             </BarChart>
           </ResponsiveContainer>
         )}

@@ -184,7 +184,9 @@ The app creates a Google Sheet with the following tabs:
 
 - **Expenses**: ID, Date, Amount, Category, Description, IsRecurring, RecurringId
 - **Income**: ID, Date, Amount, Source, Description
-- **Categories**: Category, Color
+- **Categories**: Category, Color (lives in the separate `_Config` spreadsheet)
+  - Default categories follow the top-level expense presets from [ezBookkeeping](https://github.com/mayswind/ezbookkeeping): Food & Drink, Clothing & Appearance, Housing & Houseware, Transportation, Communication, Entertainment, Education & Studying, Gifts & Donations, Medical & Healthcare, Finance & Insurance, Miscellaneous
+  - Any default that is missing is appended on load; your own rows are never removed. Add or rename categories by editing this tab directly.
 - **Budgets**: Category, MonthlyLimit
 - **RecurringExpenses**: ID, Amount, Category, Description, Frequency, StartDate, IsActive
 
