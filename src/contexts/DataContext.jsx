@@ -169,22 +169,15 @@ export const DataProvider = ({ children }) => {
   const filteredExpenses = useMemo(() => {
     if (!activeMonth) return expenses; // Show all months
 
-    return expenses.filter(exp => {
-      const expenseDate = new Date(exp.date);
-      const expMonth = expenseDate.getMonth() + 1; // 0-indexed to 1-indexed
-      return expMonth === activeMonth;
-    });
+    // Dates are 'YYYY-MM-DD' strings; read the month directly to avoid timezone shifts
+    return expenses.filter(exp => parseInt((exp.date || '').slice(5, 7), 10) === activeMonth);
   }, [expenses, activeMonth]);
 
   // Filtered income by active month (memoized)
   const filteredIncome = useMemo(() => {
     if (!activeMonth) return income; // Show all months
 
-    return income.filter(inc => {
-      const incomeDate = new Date(inc.date);
-      const incMonth = incomeDate.getMonth() + 1;
-      return incMonth === activeMonth;
-    });
+    return income.filter(inc => parseInt((inc.date || '').slice(5, 7), 10) === activeMonth);
   }, [income, activeMonth]);
 
   // Switch to a different year
