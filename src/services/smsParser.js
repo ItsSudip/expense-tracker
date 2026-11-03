@@ -104,7 +104,7 @@ function cleanMerchant(s) {
   return s
     .replace(/[._]+/g, ' ')
     .replace(/\s+/g, ' ')
-    .replace(/^[\s.\-]+|[\s.\-]+$/g, '')
+    .replace(/^[\s.-]+|[\s.-]+$/g, '')
     .trim() || null;
 }
 
@@ -159,13 +159,19 @@ function extractAccount(body) {
 // ---------------------------------------------------------------------------
 
 const CATEGORY_RULES = [
-  [/amazon|flipkart|myntra|ajio|souled|bata|shopping|store|mall/i, 'Shopping'],
-  [/pvr|inox|bookmyshow|netflix|spotify|hotstar|movie|cinema/i, 'Entertainment'],
-  [/uber|ola|rapido|irctc|petrol|fuel|toll|fastag|parking|metro|railway/i, 'Transportation'],
-  [/swiggy|zomato|restaurant|cafe|food|dominos|pizza|hotel/i, 'Food & Dining'],
-  [/jio|airtel|vodafone|electricity|water|gas|broadband|recharge|bill/i, 'Bills & Utilities'],
-  [/pharmacy|hospital|medical|clinic|apollo|health/i, 'Healthcare'],
-  [/atm withdrawal/i, 'Other'],
+  // Order matters: first match wins, so put the more specific patterns first.
+  [/pharmacy|hospital|medical|clinic|apollo|medplus|netmeds|1mg|pharmeasy|diagnostic|health/i, 'Medical & Healthcare'],
+  [/jio|airtel|vodafone|\bvi\b|bsnl|broadband|recharge|postpaid|prepaid|dth|tata ?sky|courier|delhivery|bluedart|dtdc/i, 'Communication'],
+  [/electricity|bescom|tneb|msedcl|water bill|piped gas|indane|hp gas|bharat gas|\brent\b|maintenance|society|ikea|urban ?company|pepperfry|croma|reliance digital/i, 'Housing & Houseware'],
+  [/uber|ola|rapido|irctc|redbus|indigo|air ?india|vistara|akasa|makemytrip|goibibo|petrol|diesel|fuel|hpcl|bpcl|iocl|toll|fastag|parking|metro|railway|\bcab\b/i, 'Transportation'],
+  [/myntra|ajio|nykaa|zara|h&m|h & m|westside|pantaloons|lifestyle|max fashion|bata|salon|lakme|naturals|barber|clothing|apparel/i, 'Clothing & Appearance'],
+  [/pvr|inox|bookmyshow|netflix|spotify|hotstar|prime video|youtube|movie|cinema|cult\.?fit|gym|decathlon|playo|steam|playstation|xbox|game/i, 'Entertainment'],
+  [/swiggy|zomato|zepto|blinkit|instamart|bigbasket|dmart|grocery|restaurant|cafe|starbucks|food|dominos|pizza|kfc|mcdonald|burger|hotel|bar\b|liquor|wine/i, 'Food & Drink'],
+  [/udemy|coursera|byju|unacademy|school|college|university|tuition|course|exam|book ?store|crossword|kindle/i, 'Education & Studying'],
+  [/donation|charity|temple|\btrust\b|gift|giftcard|wedding/i, 'Gifts & Donations'],
+  [/insurance|\blic\b|premium|\bemi\b|loan|interest|\bgst\b|income tax|\btds\b|penalty|\bfine\b|late fee|service charge|annual fee|zerodha|groww|mutual fund|\bsip\b/i, 'Finance & Insurance'],
+  [/amazon|flipkart|meesho|snapdeal|shopping|store|mall/i, 'Miscellaneous'],
+  [/atm withdrawal/i, 'Miscellaneous'],
 ];
 
 function suggestCategory(merchant, body) {

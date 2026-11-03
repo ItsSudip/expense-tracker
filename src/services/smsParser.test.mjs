@@ -21,7 +21,7 @@ function eq(actual, expected, label) {
 const spends = [
   {
     body: 'INR 3,560.13 spent using ICICI Bank Card XX8006 on 15-Jul-26 on AMAZON PAY INDI. Avl Limit: INR 5,87,759.30.',
-    amount: 3560.13, date: '2026-07-15', merchant: 'AMAZON PAY INDI', category: 'Shopping',
+    amount: 3560.13, date: '2026-07-15', merchant: 'AMAZON PAY INDI', category: 'Miscellaneous',
   },
   {
     body: 'Spent Rs.475 On HDFC Bank Card 2580 At .PVR INOX LIMITED_ On 2026-06-20:18:43:34.Not You?',
@@ -37,7 +37,7 @@ const spends = [
   },
   {
     body: 'Dear SBI Customer, Rs.15000 withdrawn at SBI ATM S5NM00 from A/cX3234 on 01Jun26 Transaction Number 3036.',
-    amount: 15000, date: '2026-06-01', merchant: 'ATM Withdrawal', category: 'Other',
+    amount: 15000, date: '2026-06-01', merchant: 'ATM Withdrawal', category: 'Miscellaneous',
   },
 ];
 

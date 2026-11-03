@@ -1,3 +1,5 @@
+import { DEFAULT_CATEGORY_ROWS } from '../constants/categories';
+
 const BASE_SPREADSHEET_NAME = import.meta.env.VITE_SPREADSHEET_NAME || 'ExpenseTracker';
 const CONFIG_SPREADSHEET_NAME = `${BASE_SPREADSHEET_NAME}_Config`;
 
@@ -76,8 +78,10 @@ class GoogleSheetsService {
   // Find or create the config spreadsheet (for categories)
   async findOrCreateConfigSpreadsheet() {
     try {
-      // Check if we already have the ID
+      // Check if we already have the ID (cached from localStorage)
       if (this.configSpreadsheetId) {
+        // Still make sure any newly added default categories exist (runs once per session)
+        await this.addDefaultCategories();
         return this.configSpreadsheetId;
       }
 
@@ -101,6 +105,9 @@ class GoogleSheetsService {
         if (needsInit) {
           console.log('Config spreadsheet found but missing headers, initializing...');
           await this.initializeConfigSpreadsheet();
+        } else {
+          // Existing sheet: add any default categories that are missing (never removes user rows)
+          await this.addDefaultCategories();
         }
 
         return this.configSpreadsheetId;
@@ -209,12 +216,13 @@ class GoogleSheetsService {
     }
   }
 
-  // Add default categories to config spreadsheet
+  // Ensure every default category exists in the config spreadsheet.
+  // Appends only the defaults that are missing; existing user categories are left untouched.
   async addDefaultCategories() {
+    if (this.defaultCategoriesChecked) return;
     try {
-      // Check if categories already exist
       const response = await fetch(
-        `https://sheets.googleapis.com/v4/spreadsheets/${this.configSpreadsheetId}/values/Categories!A2:B2`,
+        `https://sheets.googleapis.com/v4/spreadsheets/${this.configSpreadsheetId}/values/Categories!A2:A`,
         {
           headers: { Authorization: `Bearer ${this.accessToken}` },
         }
@@ -223,23 +231,19 @@ class GoogleSheetsService {
       await this.handleResponse(response);
       const data = await response.json();
 
-      if (data.values && data.values.length > 0) {
-        console.log('Categories already exist, skipping defaults');
+      const existing = new Set(
+        (data.values || []).map((row) => (row[0] || '').trim().toLowerCase()).filter(Boolean)
+      );
+      const missing = DEFAULT_CATEGORY_ROWS.filter(
+        ([name]) => !existing.has(name.toLowerCase())
+      );
+
+      if (missing.length === 0) {
+        this.defaultCategoriesChecked = true;
         return;
       }
 
-      console.log('Adding default categories');
-      const defaultCategories = [
-        ['Food & Dining', '#FF6384'],
-        ['Transportation', '#36A2EB'],
-        ['Shopping', '#FFCE56'],
-        ['Entertainment', '#4BC0C0'],
-        ['Bills & Utilities', '#9966FF'],
-        ['Healthcare', '#FF9F40'],
-        ['Education', '#FF6384'],
-        ['Other', '#C9CBCF'],
-      ];
-
+      console.log(`Adding ${missing.length} missing default categories`);
       const appendResponse = await fetch(
         `https://sheets.googleapis.com/v4/spreadsheets/${this.configSpreadsheetId}/values/Categories!A:A:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`,
         {
@@ -248,11 +252,12 @@ class GoogleSheetsService {
             Authorization: `Bearer ${this.accessToken}`,
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ values: defaultCategories }),
+          body: JSON.stringify({ values: missing }),
         }
       );
 
       await this.handleResponse(appendResponse);
+      this.defaultCategoriesChecked = true;
     } catch (error) {
       console.error('Error adding default categories:', error);
     }
